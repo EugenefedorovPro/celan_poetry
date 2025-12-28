@@ -1,0 +1,17 @@
+ipython
+ipdb
+black<25
+Django==6.0
+django-stubs==5.2.8
+django-extensions==4.1
+psycopg2-binary==2.9.11
+pydantic==2.12.5
+gunicorn==23.0.0
+PyMuPDF==1.26.7
+spacy==3.8.11
+# torch
+# transformers
+# sentencepiece
+
+
+
