@@ -18,6 +18,7 @@ class CollectionAdmin(admin.ModelAdmin):
 
 @admin.register(Verse)
 class VerseAdmin(admin.ModelAdmin):
-    list_display = ["collection", "title", "text"]
+    list_display = ["collection", "title", "page", "text"]
+    # list_filter = ["page", "title", "collection"]
     ordering = ["collection", "title"]
-
+    search_fields = ["title", "text"]

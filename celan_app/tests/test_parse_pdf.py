@@ -12,5 +12,5 @@ class TestParsePdf(TestCase):
 
     def test_success(self):
         parse = ParsePdf()
-        verses_names = parse.fetch_verses_names()
+        verses = parse.parse_pdf()
         ipdb.set_trace()

@@ -19,6 +19,7 @@ class Verse(models.Model):
     collection = models.ForeignKey("Collection", on_delete=models.PROTECT, null = True)
     title = models.CharField(max_length=255, default="")
     text = models.TextField(default="")
+    page = models.PositiveIntegerField(default = 0)
 
     def __str__(self):
         return self.title if self.title else self.text[:15]
