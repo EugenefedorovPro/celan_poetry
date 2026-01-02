@@ -11,4 +11,11 @@ class VerseSerializer(ModelSerializer):
 
     class Meta:
         model = Verse
-        fields = ("id", "title", "text", "collection_name")
+        fields = (
+            "id",
+            "title",
+            "text",
+            "collection_name",
+            "year_writing",
+            "year_publication",
+        )

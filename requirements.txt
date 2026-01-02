@@ -4,6 +4,7 @@ pdbpp
 ipdb
 isort
 black<25
+regex
 
 Django==6.0
 django-stubs==5.2.8

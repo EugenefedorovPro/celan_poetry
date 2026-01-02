@@ -5,6 +5,8 @@ export interface VerseInterface {
   title: string;
   text: string;
   collection: string;
+  year_writing: number;
+  year_publication: number;
 }
 
 export const verseApi = async (verseId: number): Promise<VerseInterface> => {

@@ -144,6 +144,8 @@ class ParsePdf:
                 lost_poems.append(poem)
                 continue
             verse.text = "\n".join(poem.text)
+            print(" - " * 30)
+            print(verse.title)
             verse.save()
         return lost_poems
 
