@@ -3,8 +3,12 @@ pygments
 pdbpp
 ipdb
 isort
+jupyterlab
+jupyterlab-vim
+notebook
 black<25
 regex
+python-dotenv
 
 Django==6.0
 django-stubs==5.2.8

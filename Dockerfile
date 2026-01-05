@@ -11,6 +11,11 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # needs pg_dump/psql matching Postgres 18 server
 RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    vim \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -d /etc/apt/keyrings \
  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \

@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models import PROTECT, Q
 
 # ------------------------------- Constants --------------------------------------------------------
 
@@ -134,6 +134,8 @@ class Verse(models.Model):
     title = models.CharField(max_length=255, blank=True, default="")  # original title
     text = models.TextField(blank=True, default="")  # original text
     page = models.PositiveIntegerField(default=0)
+    lemmas = models.JSONField(default=dict, blank= True)
+    neologisms = models.JSONField(default=dict, blank= True)
 
     # If you want "unknown" rather than 0, consider null=True/blank=True.
     year_publication = models.PositiveIntegerField(default=0)
@@ -159,7 +161,7 @@ class VerseTranslation(models.Model):
     verse = models.ForeignKey(
         Verse,
         on_delete=models.PROTECT,
-        related_name="translations",
+        related_name="verse_translations",
     )
     lang = models.CharField(max_length=8, choices=LANG_CHOICES)
 
@@ -208,3 +210,45 @@ class VerseTranslation(models.Model):
         who = self.translator or self.source or "unknown"
         txt_preview = (txt[:40] + "…") if len(txt) > 40 else txt
         return f"{self.get_lang_display()} – {who} – {ttl} / {txt_preview}"
+
+
+# ------------------------------- Word -------------------------------------------------------
+class Word(models.Model):
+    lemma = models.CharField(max_length=255, default="")
+    freq = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.lemma}: {self.freq}"
+
+class WordTranslation(models.Model):
+
+    LANG_CHOICES = [
+        ("ru", "Russian"),
+        ("uk", "Ukrainian"),
+        ("en", "English"),
+    ]
+
+    lemma = models.ForeignKey("Word", on_delete=PROTECT, related_name="word_translations")
+    lang = models.CharField(max_length=8, choices=LANG_CHOICES)
+    trans = models.CharField(max_length=255, default="")
+
+    is_preferred = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["lemma", "lang"]),
+            models.Index(fields=["lang", "trans"]),
+            models.Index(fields=["lemma", "lang", "is_preferred"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["lemma", "lang"],
+                condition=Q(is_preferred=True),
+                name="uniq_preferred_word_translation_per_lang",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.trans}" or "no translation"
+

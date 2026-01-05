@@ -29,6 +29,7 @@ services:
       - ./backups:/backups
     ports:
       - 8004:8000
+      - 8888:8888  # for Jupyter
     depends_on:
       db:
         condition: service_healthy
