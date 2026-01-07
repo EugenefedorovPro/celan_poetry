@@ -239,7 +239,7 @@ class Word(models.Model):
     neologism = models.BooleanField(default = False)
     verse = models.ManyToManyField(
         "Verse",
-        through="WordVerse",
+        through=WordVerse,
         related_name="words",
         blank=True,
     )
