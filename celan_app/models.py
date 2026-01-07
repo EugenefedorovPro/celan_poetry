@@ -144,6 +144,25 @@ class Verse(models.Model):
     def __str__(self):
         return self.title or (self.text[:15] if self.text else "Verse")
 
+class WordVerse(models.Model):
+    word = models.ForeignKey("Word", on_delete=models.CASCADE)
+    verse = models.ForeignKey("Verse", on_delete=models.CASCADE)
+
+    # frequency of this word in this verse
+    freq = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["verse", "word"], name="uniq_word_per_verse"),
+        ]
+        indexes = [
+            models.Index(fields=["verse", "word"]),
+            models.Index(fields=["word", "verse"]),
+        ]
+
+    def __str__(self):
+        return f"{self.word.lemma} in verse {self.verse_id}: {self.freq}"
+
 
 class VerseTranslation(models.Model):
     """
@@ -215,7 +234,15 @@ class VerseTranslation(models.Model):
 # ------------------------------- Word -------------------------------------------------------
 class Word(models.Model):
     lemma = models.CharField(max_length=255, default="")
+    # freq of lemma across all verses in db
     freq = models.PositiveIntegerField(default=0)
+    neologism = models.BooleanField(default = False)
+    verse = models.ManyToManyField(
+        "Verse",
+        through="WordVerse",
+        related_name="words",
+        blank=True,
+    )
 
     def __str__(self):
         return f"{self.lemma}: {self.freq}"
@@ -228,22 +255,24 @@ class WordTranslation(models.Model):
         ("en", "English"),
     ]
 
-    lemma = models.ForeignKey("Word", on_delete=PROTECT, related_name="word_translations")
+    word = models.ForeignKey("Word", on_delete=PROTECT, related_name="word_translations")
     lang = models.CharField(max_length=8, choices=LANG_CHOICES)
     trans = models.CharField(max_length=255, default="")
+    sense = models.TextField(default="")
 
+    is_neologism= models.BooleanField(default=False)
     is_preferred = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
-            models.Index(fields=["lemma", "lang"]),
+            models.Index(fields=["word", "lang"]),
             models.Index(fields=["lang", "trans"]),
-            models.Index(fields=["lemma", "lang", "is_preferred"]),
+            models.Index(fields=["word", "lang", "is_preferred"]),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["lemma", "lang"],
+                fields=["word", "lang"],
                 condition=Q(is_preferred=True),
                 name="uniq_preferred_word_translation_per_lang",
             ),
