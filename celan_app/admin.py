@@ -12,7 +12,7 @@ from celan_app.models import (
     VerseTranslation,
     Word,
     WordTranslation,
-    WordVerse,
+    VerseWord,  # ✅ through model bound to db_table="celan_app_verseword"
 )
 
 # ------------------------------- Shared widgets ---------------------------------------------------
@@ -28,8 +28,8 @@ WIDGET_TEXTAREA_VERSE = Textarea(attrs={"rows": 24, "cols": 120})
 class CollectionTranslationInline(admin.TabularInline):
     model = CollectionTranslation
     extra = 0
-    fields = ("lang", "name", "translator", "source", "year", "is_preferred", "notes")
-    ordering = ("lang", "-is_preferred", "translator", "source")
+    fields = ("lang", "name", "is_preferred", "notes")
+    ordering = ("lang", "-is_preferred")
 
     formfield_overrides = {
         models.TextField: {"widget": WIDGET_TEXTAREA_MED},
@@ -54,13 +54,37 @@ class VerseTranslationInline(admin.StackedInline):
 class WordTranslationInline(admin.TabularInline):
     model = WordTranslation
     extra = 0
-    fields = ("lang", "trans", "sense", "is_preferred", "is_neologism", "created_at")
+    fields = ("lang", "trans", "sense", "is_preferred", "created_at")
     readonly_fields = ("created_at",)
     ordering = ("lang", "-is_preferred", "trans")
 
     formfield_overrides = {
         models.TextField: {"widget": WIDGET_TEXTAREA_MED},
     }
+
+
+class VerseWordInlineInVerse(admin.TabularInline):
+    """
+    Edit per-verse word frequencies directly on Verse admin page.
+    """
+
+    model = VerseWord
+    extra = 0
+    fields = ("word", "freq")
+    autocomplete_fields = ("word",)
+    ordering = ("-freq",)
+
+
+class VerseWordInlineInWord(admin.TabularInline):
+    """
+    Edit verse links + per-verse frequency directly on Word admin page.
+    """
+
+    model = VerseWord
+    extra = 0
+    fields = ("verse", "freq")
+    autocomplete_fields = ("verse",)
+    ordering = ("verse",)
 
 
 # ------------------------------- Collection Admin -------------------------------------------------
@@ -117,7 +141,7 @@ class VerseAdmin(admin.ModelAdmin):
     )
     ordering = ("collection", "title")
     search_fields = ("title", "text")
-    inlines = [VerseTranslationInline]
+    inlines = [VerseTranslationInline, VerseWordInlineInVerse]
 
     formfield_overrides = {
         models.TextField: {"widget": WIDGET_TEXTAREA_VERSE},
@@ -132,7 +156,6 @@ class VerseAdmin(admin.ModelAdmin):
 
     @admin.display(description="Text (RU preferred)")
     def preferred_ru_text_preview(self, obj: Verse):
-        # ✅ VerseTranslation uses related_name="verse_translations"
         tr = (
             obj.verse_translations.filter(lang="ru", is_preferred=True).first()
             or obj.verse_translations.filter(lang="ru").first()
@@ -181,7 +204,6 @@ class VerseAdmin(admin.ModelAdmin):
         )
 
         if search_term:
-            # ✅ must use verse_translations__... (related_name)
             qs_trans = Verse.objects.filter(
                 models.Q(verse_translations__title__icontains=search_term)
                 | models.Q(verse_translations__text__icontains=search_term)
@@ -202,23 +224,28 @@ class WordAdmin(admin.ModelAdmin):
     list_display = ("lemma", "freq", "neologism", "translations_preview")
     ordering = ("lemma",)
     search_fields = ("lemma", "word_translations__trans", "word_translations__sense")
-    inlines = [WordTranslationInline]
     list_filter = ("neologism",)
+    inlines = [WordTranslationInline, VerseWordInlineInWord]
 
     @admin.display(description="Translations")
     def translations_preview(self, obj: Word):
-        # show first few translations across langs
         qs = obj.word_translations.all().order_by("lang", "-is_preferred", "trans")[:6]
         parts = [f"{t.lang}:{t.trans}" for t in qs if t.trans]
         return ", ".join(parts)
 
 
-@admin.register(WordVerse)
-class WordVerseAdmin(admin.ModelAdmin):
+# ------------------------------- Through model admin ---------------------------------------------
+
+
+@admin.register(VerseWord)
+class VerseWordAdmin(admin.ModelAdmin):
     list_display = ("word", "verse", "freq")
     ordering = ("verse", "-freq")
     search_fields = ("word__lemma", "verse__title")
     autocomplete_fields = ("word", "verse")
+
+
+# ------------------------------- WordTranslation admin -------------------------------------------
 
 
 @admin.register(WordTranslation)
@@ -228,12 +255,11 @@ class WordTranslationAdmin(admin.ModelAdmin):
         "lang",
         "trans",
         "is_preferred",
-        "is_neologism",
         "created_at",
     )
     ordering = ("word", "lang", "-is_preferred", "trans")
     search_fields = ("word__lemma", "trans", "sense")
-    list_filter = ("lang", "is_preferred", "is_neologism")
+    list_filter = ("lang", "is_preferred")
     readonly_fields = ("created_at",)
 
     formfield_overrides = {

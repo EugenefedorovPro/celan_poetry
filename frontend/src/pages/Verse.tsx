@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
-import type { VerseInterface } from "../api/verse.ts";
+import type { VerseType } from "../api/verse.ts";
 import { verseApi } from "../api/verse.ts";
 import { useParams } from "react-router-dom";
+import { VerseCard } from "../components/VerseCard"; // <-- adjust path if needed
+import { TranslationCard } from "../components/TranslationCard";
+import { ThesaurusCard } from "../components/ThesaurusCard";
+
+type Tab = "verse" | "translation" | "thesaurus";
 
 export const Verse = () => {
   const { verseId } = useParams<{ verseId: string }>();
 
-  const [data, setData] = useState<VerseInterface>();
+  const [data, setData] = useState<VerseType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [tab, setTab] = useState<Tab>("verse");
 
   useEffect(() => {
     if (!verseId) return;
@@ -28,42 +34,56 @@ export const Verse = () => {
     return <span>{error}</span>;
   }
 
+  if (!data) return <span>Not found</span>;
+
   return (
-    <>
-      {data && (
-        <div className="container mt-4">
-          <div className="card shadow-sm">
-            <div className="card-body">
+    <div className="container mt-4">
+      {/* Tabs header */}
+      <ul className="nav nav-tabs">
+        <li className="nav-item">
+          <button
+            type="button"
+            className={`nav-link ${tab === "verse" ? "active" : ""}`}
+            onClick={() => setTab("verse")}
+          >
+            Verse
+          </button>
+        </li>
 
-              {/* Collection */}
-              <h6 className="card-subtitle text-muted mb-2">
-                {data.collection}
-              </h6>
+        <li className="nav-item">
+          <button
+            type="button"
+            className={`nav-link ${tab === "translation" ? "active" : ""}`}
+            onClick={() => setTab("translation")}
+          >
+            Translation
+          </button>
+        </li>
 
-              {/* Title */}
-              <h5 className="card-title mb-3">
-                {data.title}
-              </h5>
+        <li className="nav-item">
+          <button
+            type="button"
+            className={`nav-link ${tab === "thesaurus" ? "active" : ""}`}
+            onClick={() => setTab("thesaurus")}
+          >
+            Thesaurus
+          </button>
+        </li>
+      </ul>
 
-              {/* Years */}
-              <div className="mb-3 text-muted small">
-                {data.year_writing !== 0 && (
-                  <div>Written: {data.year_writing}</div>
-                )}
-                {data.year_publication !== 0 && (
-                  <div>Published: {data.year_publication}</div>
-                )}
-              </div>
-
-              {/* Text */}
-              <p className="card-text" style={{ whiteSpace: "pre-line" }}>
-                {data.text}
-              </p>
-
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      {/* Tabs content */}
+      <div className="border border-top-0 p-3">
+        {tab === "verse" && <VerseCard data={data} />}
+        {tab === "translation" && (
+          <TranslationCard translations={data.verse_translations} />
+        )}
+        {tab === "thesaurus" && (
+          <ThesaurusCard
+            words={data.words}
+            translations={data.word_translations}
+          />
+        )}
+      </div>
+    </div>
   );
 };

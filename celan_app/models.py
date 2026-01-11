@@ -1,3 +1,5 @@
+# celan_app/models.py
+
 from django.db import models
 from django.db.models import PROTECT, Q
 
@@ -21,32 +23,29 @@ class Collection(models.Model):
     Translations (multiple per language) live in CollectionTranslation.
     """
 
-    name = models.CharField(
-        max_length=255, blank=True, default=""
-    )  # original name (DE or canonical)
+    name = models.CharField(max_length=255, blank=True, default="")
     genre = models.CharField(max_length=255, blank=True, default="")
     is_real_celan_collection = models.CharField(max_length=255, blank=True, default="")
     year_publication = models.PositiveIntegerField(null=True, blank=True)
     number_verses = models.PositiveBigIntegerField(default=0)
-    notes = models.TextField(blank=True, default="")  # original notes (canonical)
+    notes = models.TextField(blank=True, default="")  # canonical/original notes
 
-    def __str__(self):
+    def __str__(self) -> str:
         name = self.name or "no name"
-        year = self.year_publication or "no year"
+        year = self.year_publication if self.year_publication is not None else "no year"
         return f"{name} - {year}"
 
 
 class CollectionTranslation(models.Model):
     """
     Multiple translations per language are allowed.
-    Use `is_preferred=True` to mark one preferred translation per (collection, lang).
+    Use is_preferred=True to mark one preferred translation per (collection, lang).
     """
 
     LANG_CHOICES = [
         ("ru", "Russian"),
         ("uk", "Ukrainian"),
         ("en", "English"),
-        # add more without schema changes
     ]
 
     collection = models.ForeignKey(
@@ -56,45 +55,33 @@ class CollectionTranslation(models.Model):
     )
     lang = models.CharField(max_length=8, choices=LANG_CHOICES)
 
-    # Variant metadata (helps distinguish multiple translations in the same language)
-    translator = models.CharField(max_length=255, blank=True, default="")  # person/team
-    source = models.CharField(
-        max_length=255, blank=True, default=""
-    )  # edition/book/site
-    year = models.PositiveIntegerField(null=True, blank=True)
-
-    # Translated content (both can be present; often you want both)
+    # Translated content
     name = models.CharField(max_length=255, blank=True, default="")
     notes = models.TextField(blank=True, default="")
 
-    # Optional preference flag (only one per collection+lang)
     is_preferred = models.BooleanField(default=False)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["collection", "lang"]),
-            models.Index(fields=["lang", "translator"]),
             models.Index(fields=["collection", "lang", "is_preferred"]),
         ]
-        # Avoid accidental exact-duplicate variants by metadata.
         constraints = [
+            # Prevent exact duplicate variants by metadata (optional but useful)
             models.UniqueConstraint(
-                fields=["collection", "lang", "translator", "source", "year"],
-                name="uniq_collection_translation_variant_meta",
+                fields=["collection", "lang"],
+                name="uniq_collection_lang",
             ),
-            # PostgreSQL supports partial unique constraints.
-            # This enforces: at most one preferred translation per language per collection.
+            # At most one preferred translation per collection+lang
             models.UniqueConstraint(
                 fields=["collection", "lang"],
                 condition=Q(is_preferred=True),
-                name="uniq_preferred_collection_translation_per_lang",
+                name="uniq_preferred_collection_per_lang",
             ),
         ]
 
-    def __str__(self):
-        # Pretty fallback messages for admin list views
+    def __str__(self) -> str:
         if self.lang == "ru":
             nm = self.name or NO_NAME_RUS
             nt = self.notes or NO_NOTES_RUS
@@ -108,10 +95,8 @@ class CollectionTranslation(models.Model):
             nm = self.name or "no name"
             nt = self.notes or "no notes"
 
-        who = self.translator or self.source or "unknown"
-        # keep it short
         notes_preview = (nt[:40] + "…") if len(nt) > 40 else nt
-        return f"{self.get_lang_display()} – {who} – {nm} / {notes_preview}"
+        return f"{self.get_lang_display()} – {nm} / {notes_preview}"
 
 
 # ------------------------------- Verse ------------------------------------------------------------
@@ -131,50 +116,30 @@ class Verse(models.Model):
         related_name="verses",
     )
 
-    title = models.CharField(max_length=255, blank=True, default="")  # original title
-    text = models.TextField(blank=True, default="")  # original text
+    title = models.CharField(max_length=255, blank=True, default="")
+    text = models.TextField(blank=True, default="")
     page = models.PositiveIntegerField(default=0)
-    lemmas = models.JSONField(default=dict, blank= True)
-    neologisms = models.JSONField(default=dict, blank= True)
 
-    # If you want "unknown" rather than 0, consider null=True/blank=True.
+    lemmas = models.JSONField(default=dict, blank=True)
+    neologisms = models.JSONField(default=dict, blank=True)
+
     year_publication = models.PositiveIntegerField(default=0)
     year_writing = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.title or (self.text[:15] if self.text else "Verse")
-
-class WordVerse(models.Model):
-    word = models.ForeignKey("Word", on_delete=models.CASCADE)
-    verse = models.ForeignKey("Verse", on_delete=models.CASCADE)
-
-    # frequency of this word in this verse
-    freq = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["verse", "word"], name="uniq_word_per_verse"),
-        ]
-        indexes = [
-            models.Index(fields=["verse", "word"]),
-            models.Index(fields=["word", "verse"]),
-        ]
-
-    def __str__(self):
-        return f"{self.word.lemma} in verse {self.verse_id}: {self.freq}"
 
 
 class VerseTranslation(models.Model):
     """
     Multiple translations per language are allowed.
-    Use `is_preferred=True` to mark one preferred translation per (verse, lang).
+    Use is_preferred=True to mark one preferred translation per (verse, lang).
     """
 
     LANG_CHOICES = [
         ("ru", "Russian"),
         ("uk", "Ukrainian"),
         ("en", "English"),
-        # add more without schema changes
     ]
 
     verse = models.ForeignKey(
@@ -212,16 +177,16 @@ class VerseTranslation(models.Model):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.lang == "ru":
             ttl = self.title or NO_NAME_RUS
-            txt = self.text or NO_NAME_RUS
+            txt = self.text or NO_NOTES_RUS
         elif self.lang == "uk":
             ttl = self.title or NO_NAME_UKR
-            txt = self.text or NO_NAME_UKR
+            txt = self.text or NO_NOTES_UKR
         elif self.lang == "en":
             ttl = self.title or NO_NAME_ENG
-            txt = self.text or NO_NAME_ENG
+            txt = self.text or NO_NOTES_ENG
         else:
             ttl = self.title or "no title"
             txt = self.text or "no text"
@@ -231,36 +196,69 @@ class VerseTranslation(models.Model):
         return f"{self.get_lang_display()} – {who} – {ttl} / {txt_preview}"
 
 
-# ------------------------------- Word -------------------------------------------------------
+# ------------------------------- Word / VerseWord -------------------------------------------------
+
+
 class Word(models.Model):
     lemma = models.CharField(max_length=255, default="")
-    # freq of lemma across all verses in db
+    # freq of lemma across all verses in db (global freq)
     freq = models.PositiveIntegerField(default=0)
-    neologism = models.BooleanField(default = False)
+    neologism = models.BooleanField(default=False)
+
+    # IMPORTANT: explicit through model so we can store per-verse frequency.
+    # We bind through="VerseWord", which maps to existing table celan_app_verseword.
     verse = models.ManyToManyField(
-        "Verse",
-        through=WordVerse,
+        Verse,
+        through="VerseWord",
         related_name="words",
         blank=True,
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.lemma}: {self.freq}"
 
-class WordTranslation(models.Model):
 
+class VerseWord(models.Model):
+    """
+    Join table between Verse and Word with per-verse word frequency.
+
+    IMPORTANT:
+    Your DB already has the table named 'celan_app_verseword', so we pin it using db_table
+    to avoid Django expecting 'celan_app_wordverse'.
+    """
+
+    word = models.ForeignKey(Word, on_delete=models.CASCADE)
+    verse = models.ForeignKey(Verse, on_delete=models.CASCADE)
+
+    freq = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "celan_app_verseword"
+        constraints = [
+            models.UniqueConstraint(fields=["verse", "word"], name="uniq_word_per_verse"),
+        ]
+        indexes = [
+            models.Index(fields=["verse", "word"]),
+            models.Index(fields=["word", "verse"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.word.lemma} in verse {self.verse_id}: {self.freq}"
+
+
+class WordTranslation(models.Model):
     LANG_CHOICES = [
         ("ru", "Russian"),
         ("uk", "Ukrainian"),
         ("en", "English"),
     ]
 
-    word = models.ForeignKey("Word", on_delete=PROTECT, related_name="word_translations")
+    word = models.ForeignKey(Word, on_delete=PROTECT, related_name="word_translations")
     lang = models.CharField(max_length=8, choices=LANG_CHOICES)
-    trans = models.CharField(max_length=255, default="")
-    sense = models.TextField(default="")
 
-    is_neologism= models.BooleanField(default=False)
+    trans = models.CharField(max_length=255, default="", blank=True)
+    sense = models.TextField(default="", blank=True)
+
     is_preferred = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -278,6 +276,5 @@ class WordTranslation(models.Model):
             ),
         ]
 
-    def __str__(self):
-        return f"{self.trans}" or "no translation"
-
+    def __str__(self) -> str:
+        return self.trans or "no translation"
