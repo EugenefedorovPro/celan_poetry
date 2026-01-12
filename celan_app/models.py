@@ -121,7 +121,8 @@ class Verse(models.Model):
     page = models.PositiveIntegerField(default=0)
 
     lemmas = models.JSONField(default=dict, blank=True)
-    neologisms = models.JSONField(default=dict, blank=True)
+    forms_by_lemma = models.JSONField(default=dict, blank=True)
+
 
     year_publication = models.PositiveIntegerField(default=0)
     year_writing = models.PositiveIntegerField(default=0)
@@ -214,6 +215,9 @@ class Word(models.Model):
         blank=True,
     )
 
+    forms = models.JSONField(default=dict, blank=True)
+    quotes = models.JSONField(default=dict, blank=True)
+
     def __str__(self) -> str:
         return f"{self.lemma}: {self.freq}"
 
@@ -256,8 +260,7 @@ class WordTranslation(models.Model):
     word = models.ForeignKey(Word, on_delete=PROTECT, related_name="word_translations")
     lang = models.CharField(max_length=8, choices=LANG_CHOICES)
 
-    trans = models.CharField(max_length=255, default="", blank=True)
-    sense = models.TextField(default="", blank=True)
+    trans = models.TextField(default="", blank=True)
 
     is_preferred = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

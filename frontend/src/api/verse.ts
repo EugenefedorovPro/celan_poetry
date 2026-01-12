@@ -28,7 +28,6 @@ export type WordTranslationType = {
   word_id: string;
   lang: Lang;
   lang_display: string;
-  sense: string;
   trans: string;
 };
 

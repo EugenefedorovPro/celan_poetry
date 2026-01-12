@@ -40,8 +40,7 @@ export function ThesaurusCard({ translations, words }: ThesaurusCardProps) {
       arr = arr.filter((t) => {
         const lemma = (t.lemma ?? "").toLowerCase();
         const trans = (t.trans ?? "").toLowerCase();
-        const sense = (t.sense ?? "").toLowerCase();
-        return lemma.includes(q) || trans.includes(q) || sense.includes(q);
+        return lemma.includes(q) || trans.includes(q);
       });
     }
 
@@ -146,9 +145,6 @@ export function ThesaurusCard({ translations, words }: ThesaurusCardProps) {
                   {t.trans || <span className="text-muted">(empty)</span>}
                 </div>
 
-                {t.sense && (
-                  <div className="text-muted small mt-1">{t.sense}</div>
-                )}
               </div>
             );
           })}

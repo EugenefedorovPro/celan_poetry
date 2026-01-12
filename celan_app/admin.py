@@ -12,7 +12,7 @@ from celan_app.models import (
     VerseTranslation,
     Word,
     WordTranslation,
-    VerseWord,  # ✅ through model bound to db_table="celan_app_verseword"
+    VerseWord,
 )
 
 # ------------------------------- Shared widgets ---------------------------------------------------
@@ -54,7 +54,7 @@ class VerseTranslationInline(admin.StackedInline):
 class WordTranslationInline(admin.TabularInline):
     model = WordTranslation
     extra = 0
-    fields = ("lang", "trans", "sense", "is_preferred", "created_at")
+    fields = ("lang", "trans", "is_preferred", "created_at")
     readonly_fields = ("created_at",)
     ordering = ("lang", "-is_preferred", "trans")
 
@@ -137,7 +137,6 @@ class VerseAdmin(admin.ModelAdmin):
         "text_preview",
         "preferred_ru_text_preview",
         "lemmas_preview",
-        "neologisms_preview",
     )
     ordering = ("collection", "title")
     search_fields = ("title", "text")
@@ -181,9 +180,9 @@ class VerseAdmin(admin.ModelAdmin):
             return f"{len(data)} items: {sample}{suffix}" if data else ""
         return str(data)[:120]
 
-    @admin.display(description="Neologisms")
+    @admin.display(description="forms_by_lemma")
     def neologisms_preview(self, obj: Verse):
-        data = obj.neologisms or {}
+        data = obj.forms_by_lemma or {}
         if isinstance(data, dict):
             keys = list(data.keys())
             sample = ", ".join(map(str, keys[:8]))
@@ -218,20 +217,39 @@ class VerseAdmin(admin.ModelAdmin):
 
 # ------------------------------- Word Admin -------------------------------------------------------
 
-
 @admin.register(Word)
 class WordAdmin(admin.ModelAdmin):
     list_display = ("lemma", "freq", "neologism", "translations_preview")
     ordering = ("lemma",)
-    search_fields = ("lemma", "word_translations__trans", "word_translations__sense")
+    search_fields = ("lemma", "word_translations__trans")
     list_filter = ("neologism",)
     inlines = [WordTranslationInline, VerseWordInlineInWord]
 
+    fieldsets = (
+        ("Core", {
+            "fields": ("lemma", "freq", "neologism"),
+        }),
+        ("Linguistic data", {
+            "fields": ("forms", "quotes"),
+            "classes": ("collapse",),  # optional but useful
+        }),
+    )
+
+    # Better widget for JSON
+    formfield_overrides = {
+        models.JSONField: {
+            "widget": Textarea(attrs={"rows": 8, "cols": 80}),
+        },
+    }
+
     @admin.display(description="Translations")
     def translations_preview(self, obj: Word):
-        qs = obj.word_translations.all().order_by("lang", "-is_preferred", "trans")[:6]
-        parts = [f"{t.lang}:{t.trans}" for t in qs if t.trans]
-        return ", ".join(parts)
+        qs = obj.word_translations.all().order_by(
+            "lang", "-is_preferred", "trans"
+        )[:6]
+        return ", ".join(
+            f"{t.lang}:{t.trans}" for t in qs if t.trans
+        )
 
 
 # ------------------------------- Through model admin ---------------------------------------------
@@ -258,7 +276,7 @@ class WordTranslationAdmin(admin.ModelAdmin):
         "created_at",
     )
     ordering = ("word", "lang", "-is_preferred", "trans")
-    search_fields = ("word__lemma", "trans", "sense")
+    search_fields = ("word__lemma", "trans")
     list_filter = ("lang", "is_preferred")
     readonly_fields = ("created_at",)
 

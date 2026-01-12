@@ -33,7 +33,6 @@ class WordTranslationDTO(BaseModel):
     word_id: int
     lang: Lang
     lang_display: str
-    sense: str
     trans: str
 
 

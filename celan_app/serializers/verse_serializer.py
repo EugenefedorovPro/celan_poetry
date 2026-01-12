@@ -30,7 +30,6 @@ class WordTranslationSerializer(serializers.ModelSerializer):
             "word_id",
             "lang",
             "lang_display",
-            "sense",
             "trans",
         )
 
